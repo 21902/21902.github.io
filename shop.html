@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - ระบบจัดการหลังบ้าน</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/1055/1055646.png">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&display=swap" rel="stylesheet">    <style>
+        body { font-family: 'Kanit', sans-serif; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="bg-slate-100 p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-slate-800">⚙️ Dashboard Management</h1>
+            <a href="main.html" class="bg-white border-2 border-slate-200 px-5 py-2 rounded-xl font-bold hover:bg-slate-50 transition">
+                กลับหน้าหลัก
+            </a>
+        </div>
+
+        <!-- Content Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Left Sidebar -->
+            <div class="space-y-6">
+                <!-- Rate Card -->
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                    <h2 class="font-bold text-lg mb-4 text-blue-600">ตั้งค่าเรทขาย</h2>
+                    <input type="number" id="rate-input" class="w-full border-2 p-3 rounded-xl text-2xl font-bold text-blue-600 outline-none" placeholder="7">
+                    <button id="save-rate-btn" class="w-full mt-3 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">
+                        บันทึกเรท
+                    </button>
+                </div>
+
+                <!-- Category List -->
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                    <h2 class="font-bold text-lg mb-4 text-purple-600">เลือกหมวดหมู่</h2>
+                    
+                    <!-- Search Box -->
+                    <input type="text" id="category-filter" placeholder="🔍 ค้นหาหมวดหมู่..." class="w-full border-2 p-2 rounded-lg mb-3 text-sm outline-none focus:border-purple-400">
+                    
+                    <!-- Select All / Clear All -->
+                    <div class="flex gap-2 mb-3">
+                        <button id="select-all-btn" class="flex-1 bg-purple-100 text-purple-700 py-1 px-3 rounded-lg text-xs font-bold hover:bg-purple-200 transition">
+                            ✓ เลือกทั้งหมด
+                        </button>
+                        <button id="clear-all-btn" class="flex-1 bg-slate-100 text-slate-600 py-1 px-3 rounded-lg text-xs font-bold hover:bg-slate-200 transition">
+                            ✕ ล้างทั้งหมด
+                        </button>
+                    </div>
+                    
+                    <div id="category-list" class="space-y-2 max-h-[400px] overflow-y-auto">
+                        <!-- Categories will be rendered here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="md:col-span-2">
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 min-h-[400px]">
+                    <div class="flex justify-between items-center mb-6 border-b pb-4">
+                        <h2 class="font-bold text-xl text-slate-700">รายการสินค้า</h2>
+                        <button id="open-modal-btn" class="bg-green-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg transition active:scale-95">
+                            + เพิ่ม Gamepass
+                        </button>
+                    </div>
+                    <div id="product-display" class="space-y-6">
+                        <!-- Products will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 z-50 flex items-center justify-center hidden p-4">
+        <div class="absolute inset-0 bg-black opacity-60" id="modal-backdrop"></div>
+        <div class="bg-white w-full max-w-md mx-auto rounded-[2.5rem] shadow-2xl z-50 overflow-hidden relative p-8">
+            <div class="flex justify-between items-center mb-6">
+                <p class="text-2xl font-bold text-slate-800">เพิ่มสินค้า</p>
+                <button id="close-modal-btn" class="text-slate-400 text-2xl hover:text-slate-600">✕</button>
+            </div>
+            
+            <div class="space-y-5">
+                <input type="text" id="product-name" placeholder="ชื่อรายการ" class="w-full border-2 p-3 rounded-xl outline-none focus:border-blue-400">
+                
+                <input type="number" id="product-robux" placeholder="ราคา Robux" class="w-full border-2 p-3 rounded-xl outline-none font-bold text-blue-600 focus:border-blue-400">
+                
+                <!-- Category Selection -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">เลือกหรือเพิ่มหมวดหมู่</label>
+                    
+                    <select id="product-category" class="w-full border-2 p-2 rounded-lg mb-3 bg-white outline-none focus:border-purple-400">
+                        <option value="" disabled selected>เลือกหมวดหมู่</option>
+                    </select>
+                    
+                    <div class="flex gap-2">
+                        <input type="text" id="new-category-input" placeholder="พิมพ์หมวดหมู่ใหม่..." class="flex-1 border-2 p-2 rounded-lg text-sm outline-none focus:border-purple-400">
+                        <button id="add-category-btn" class="bg-purple-600 text-white px-4 rounded-lg font-bold text-sm hover:bg-purple-700 transition">
+                            เพิ่ม
+                        </button>
+                    </div>
+                </div>
+
+                <input type="text" id="product-image" placeholder="ลิงก์รูปภาพ (URL)" class="w-full border-2 p-3 rounded-xl outline-none focus:border-blue-400">
+                
+                <!-- Price Preview -->
+                <div class="bg-blue-50 p-4 rounded-2xl border-2 border-dashed border-blue-200 text-center">
+                    <h3 class="text-3xl font-bold text-blue-700">
+                        <span id="price-preview">0</span> บาท
+                    </h3>
+                </div>
+                
+                <button id="save-product-btn" class="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-xl hover:bg-green-700 transition">
+                    บันทึกสินค้า
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // DATA MANAGEMENT
+        // ========================================
+        
+        class DataStore {
+            constructor() {
+                this.data = this.loadData();
+            }
+
+            loadData() {
+                const saved = localStorage.getItem('robuxStore');
+                if (saved) {
+                    return JSON.parse(saved);
+                }
+                return {
+                    rate: 7,
+                    categories: ['สินค้าทั่วไป'],
+                    items: []
+                };
+            }
+
+            save() {
+                localStorage.setItem('robuxStore', JSON.stringify(this.data));
+                console.log('💾 บันทึกข้อมูลแล้ว:', this.data);
+            }
+
+            getRate() {
+                return this.data.rate;
+            }
+
+            setRate(rate) {
+                this.data.rate = rate;
+                this.save();
+            }
+
+            getCategories() {
+                return this.data.categories;
+            }
+
+            addCategory(name) {
+                if (!this.data.categories.includes(name)) {
+                    this.data.categories.push(name);
+                    this.save();
+                    return true;
+                }
+                return false;
+            }
+
+            deleteCategory(name) {
+                this.data.categories = this.data.categories.filter(c => c !== name);
+                this.data.items = this.data.items.filter(i => i.category !== name);
+                this.save();
+            }
+
+            getItems() {
+                return this.data.items;
+            }
+
+            addItem(item) {
+                this.data.items.push({
+                    id: Date.now(),
+                    ...item
+                });
+                this.save();
+            }
+
+            deleteItem(id) {
+                this.data.items = this.data.items.filter(i => i.id !== id);
+                this.save();
+            }
+        }
+
+        // ========================================
+        // UI MANAGEMENT
+        // ========================================
+        
+        class UI {
+            constructor(store) {
+                this.store = store;
+                this.selectedCategories = new Set(); // เก็บหมวดหมู่ที่เลือก
+                this.initElements();
+                this.attachEvents();
+            }
+
+            initElements() {
+                // Rate
+                this.rateInput = document.getElementById('rate-input');
+                this.saveRateBtn = document.getElementById('save-rate-btn');
+                
+                // Categories
+                this.categoryList = document.getElementById('category-list');
+                this.categoryFilter = document.getElementById('category-filter');
+                this.selectAllBtn = document.getElementById('select-all-btn');
+                this.clearAllBtn = document.getElementById('clear-all-btn');
+                
+                // Products
+                this.productDisplay = document.getElementById('product-display');
+                
+                // Modal
+                this.modal = document.getElementById('modal');
+                this.openModalBtn = document.getElementById('open-modal-btn');
+                this.closeModalBtn = document.getElementById('close-modal-btn');
+                this.modalBackdrop = document.getElementById('modal-backdrop');
+                
+                // Form
+                this.productName = document.getElementById('product-name');
+                this.productRobux = document.getElementById('product-robux');
+                this.productCategory = document.getElementById('product-category');
+                this.productImage = document.getElementById('product-image');
+                this.pricePreview = document.getElementById('price-preview');
+                this.saveProductBtn = document.getElementById('save-product-btn');
+                
+                // New Category
+                this.newCategoryInput = document.getElementById('new-category-input');
+                this.addCategoryBtn = document.getElementById('add-category-btn');
+            }
+
+            attachEvents() {
+                // Rate
+                this.saveRateBtn.addEventListener('click', () => this.handleSaveRate());
+                
+                // Modal
+                this.openModalBtn.addEventListener('click', () => this.openModal());
+                this.closeModalBtn.addEventListener('click', () => this.closeModal());
+                this.modalBackdrop.addEventListener('click', () => this.closeModal());
+                
+                // Form
+                this.productRobux.addEventListener('input', () => this.updatePricePreview());
+                this.saveProductBtn.addEventListener('click', () => this.handleSaveProduct());
+                
+                // New Category
+                this.addCategoryBtn.addEventListener('click', () => this.handleAddCategory());
+                this.newCategoryInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.handleAddCategory();
+                });
+                
+                // Category Filter
+                this.categoryFilter.addEventListener('input', () => this.filterCategories());
+                
+                // Select All / Clear All
+                this.selectAllBtn.addEventListener('click', () => this.selectAllCategories());
+                this.clearAllBtn.addEventListener('click', () => this.clearAllCategories());
+            }
+
+            // Rate
+            handleSaveRate() {
+                const rate = parseFloat(this.rateInput.value);
+                if (rate > 0) {
+                    this.store.setRate(rate);
+                    alert('✅ บันทึกเรทแล้ว!');
+                    this.renderProducts();
+                } else {
+                    alert('❌ กรุณาใส่เรทที่ถูกต้อง');
+                }
+            }
+
+            // Modal
+            openModal() {
+                this.modal.classList.remove('hidden');
+                this.renderCategoryDropdown();
+                this.clearForm();
+            }
+
+            closeModal() {
+                this.modal.classList.add('hidden');
+            }
+
+            clearForm() {
+                this.productName.value = '';
+                this.productRobux.value = '';
+                this.productCategory.value = '';
+                this.productImage.value = '';
+                this.newCategoryInput.value = '';
+                this.pricePreview.textContent = '0';
+            }
+
+            // Category Dropdown (for modal)
+            renderCategoryDropdown() {
+                const categories = this.store.getCategories();
+                
+                let html = '<option value="" disabled selected>เลือกหมวดหมู่</option>';
+                categories.forEach(cat => {
+                    html += `<option value="${cat}">${cat}</option>`;
+                });
+                
+                this.productCategory.innerHTML = html;
+                
+                console.log('🎨 วาด dropdown:', categories);
+            }
+
+            // Add Category
+            handleAddCategory() {
+                const name = this.newCategoryInput.value.trim();
+                
+                if (!name) {
+                    alert('❌ กรุณาพิมพ์ชื่อหมวดหมู่');
+                    return;
+                }
+
+                const success = this.store.addCategory(name);
+                
+                if (success) {
+                    console.log('✅ เพิ่มหมวดหมู่:', name);
+                    
+                    // อัปเดต dropdown
+                    this.renderCategoryDropdown();
+                    
+                    // เลือกหมวดหมู่ที่เพิ่งสร้าง
+                    this.productCategory.value = name;
+                    
+                    // อัปเดตรายการด้านซ้าย
+                    this.renderCategoryList();
+                    
+                    // ล้างช่อง
+                    this.newCategoryInput.value = '';
+                } else {
+                    alert('❌ หมวดหมู่นี้มีอยู่แล้ว');
+                }
+            }
+
+            // Filter Categories (ช่องค้นหาด้านซ้าย)
+            filterCategories() {
+                const searchTerm = this.categoryFilter.value.toLowerCase().trim();
+                const categories = this.store.getCategories();
+                
+                const filtered = searchTerm 
+                    ? categories.filter(cat => cat.toLowerCase().includes(searchTerm))
+                    : categories;
+                
+                this.renderCategoryList(filtered);
+            }
+
+            // Toggle Category Selection
+            toggleCategory(category) {
+                if (this.selectedCategories.has(category)) {
+                    this.selectedCategories.delete(category);
+                } else {
+                    this.selectedCategories.add(category);
+                }
+                
+                // อัปเดต UI
+                this.updateCategoryCheckboxes();
+                this.renderProducts();
+            }
+
+            // Select All Categories
+            selectAllCategories() {
+                const allCategories = this.store.getCategories();
+                this.selectedCategories = new Set(allCategories);
+                this.updateCategoryCheckboxes();
+                this.renderProducts();
+            }
+
+            // Clear All Categories
+            clearAllCategories() {
+                this.selectedCategories.clear();
+                this.updateCategoryCheckboxes();
+                this.renderProducts();
+            }
+
+            // Update Checkboxes UI
+            updateCategoryCheckboxes() {
+                const checkboxes = this.categoryList.querySelectorAll('.category-checkbox');
+                checkboxes.forEach(checkbox => {
+                    const category = checkbox.dataset.category;
+                    checkbox.checked = this.selectedCategories.has(category);
+                    
+                    // อัปเดตสีพื้นหลัง
+                    const label = checkbox.closest('label');
+                    if (this.selectedCategories.has(category)) {
+                        label.classList.add('border-purple-400', 'bg-purple-50');
+                        label.classList.remove('border-slate-200');
+                    } else {
+                        label.classList.remove('border-purple-400', 'bg-purple-50');
+                        label.classList.add('border-slate-200');
+                    }
+                });
+            }
+
+            // Price Preview
+            updatePricePreview() {
+                const robux = parseFloat(this.productRobux.value) || 0;
+                const rate = this.store.getRate();
+                const thb = Math.ceil(robux / rate);
+                this.pricePreview.textContent = thb;
+            }
+
+            // Save Product
+            handleSaveProduct() {
+                const name = this.productName.value.trim();
+                const robux = parseFloat(this.productRobux.value);
+                const category = this.productCategory.value;
+                const image = this.productImage.value.trim() || 'https://via.placeholder.com/150';
+
+                if (!name) {
+                    alert('❌ กรุณาใส่ชื่อสินค้า');
+                    return;
+                }
+
+                if (!robux || robux <= 0) {
+                    alert('❌ กรุณาใส่ราคา Robux');
+                    return;
+                }
+
+                if (!category) {
+                    alert('❌ กรุณาเลือกหมวดหมู่');
+                    return;
+                }
+
+                this.store.addItem({
+                    name,
+                    robux,
+                    category,
+                    img: image
+                });
+
+                console.log('✅ เพิ่มสินค้าสำเร็จ');
+                this.closeModal();
+                this.renderProducts();
+            }
+
+            // Delete Category
+            handleDeleteCategory(name) {
+                const itemCount = this.store.getItems().filter(i => i.category === name).length;
+                if (confirm(`ลบหมวดหมู่ "${name}" และสินค้าทั้งหมด ${itemCount} รายการ?`)) {
+                    this.store.deleteCategory(name);
+                    
+                    // ลบออกจาก selected ด้วย
+                    this.selectedCategories.delete(name);
+                    
+                    this.render();
+                }
+            }
+
+            // Delete Item
+            handleDeleteItem(id) {
+                if (confirm('ลบสินค้านี้?')) {
+                    this.store.deleteItem(id);
+                    this.renderProducts();
+                }
+            }
+
+            // Render All
+            render() {
+                this.renderRate();
+                this.renderCategoryList();
+                this.renderProducts();
+            }
+
+            renderRate() {
+                this.rateInput.value = this.store.getRate();
+            }
+
+            renderCategoryList(categories = null) {
+                const categoriesToShow = categories || this.store.getCategories();
+                
+                if (categoriesToShow.length === 0) {
+                    this.categoryList.innerHTML = '<p class="text-slate-400 text-sm text-center py-4">ไม่พบหมวดหมู่</p>';
+                    return;
+                }
+                
+                this.categoryList.innerHTML = categoriesToShow.map(cat => {
+                    const isChecked = this.selectedCategories.has(cat);
+                    return `
+                        <label class="flex items-center gap-3 bg-white p-3 rounded-xl border cursor-pointer transition ${isChecked ? 'border-purple-400 bg-purple-50' : 'border-slate-200 hover:border-purple-300'}">
+                            <input type="checkbox" 
+                                   class="peer appearance-none w-6 h-6 border-2 border-slate-300 rounded-lg cursor-pointer transition-all checked:bg-blue-600 checked:border-transparent hover:border-blue-400"
+                                   data-category="${cat}"
+                                   ${isChecked ? 'checked' : ''}>
+                            <span class="font-bold text-slate-700 text-sm flex-1">${cat}</span>
+                        </label>
+                    `;
+                }).join('');
+                
+                // Add event listeners to checkboxes
+                this.categoryList.querySelectorAll('.category-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => {
+                        this.toggleCategory(e.target.dataset.category);
+                    });
+                });
+            }
+
+            renderProducts() {
+                // ถ้าไม่มีการเลือกหมวดหมู่ ให้แสดงทั้งหมด
+                const categoriesToShow = (this.selectedCategories.size === 0) 
+                    ? this.store.getCategories() 
+                    : Array.from(this.selectedCategories);
+                
+                const items = this.store.getItems();
+                const rate = this.store.getRate();
+
+                let html = '';
+
+                categoriesToShow.forEach(cat => {
+                    const categoryItems = items.filter(item => item.category === cat);
+                    
+                    if (categoryItems.length > 0) {
+                        html += `
+                            <div class="bg-white rounded-3xl border overflow-hidden shadow-sm">
+                                <div class="bg-slate-800 p-3 px-5 text-white text-sm font-bold flex justify-between items-center">
+                                    <span>📂 ${cat} <span class="text-slate-400 text-xs">(${categoryItems.length} รายการ)</span></span>
+                                    <button onclick="app.ui.handleDeleteCategory('${cat}')" class="text-red-400 hover:text-red-300 transition px-2 text-xs">
+                                        🗑️ ลบหมวดหมู่
+                                    </button>
+                                </div>
+                                <div class="p-2 overflow-x-auto">
+                                    <table class="w-full text-sm">
+                                        <tbody class="divide-y">
+                        `;
+
+                        categoryItems.forEach(item => {
+                            const thb = Math.ceil(item.robux / rate);
+                            html += `
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3">
+                                        <img src="${item.img}" class="w-10 h-10 rounded-lg object-cover" alt="${item.name}" onerror="this.src='https://via.placeholder.com/150'">
+                                    </td>
+                                    <td class="font-bold text-slate-700">${item.name}</td>
+                                    <td class="text-right font-bold text-blue-500">${item.robux} R$</td>
+                                    <td class="text-right font-bold text-green-600">${thb}฿</td>
+                                    <td class="text-center">
+                                        <button onclick="app.ui.handleDeleteItem(${item.id})" class="text-slate-300 hover:text-red-500 transition">
+                                            ✕
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+
+                        html += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                if (html === '') {
+                    html = '<p class="text-slate-400 text-center py-10">ไม่พบสินค้าในหมวดหมู่ที่เลือก</p>';
+                }
+
+                this.productDisplay.innerHTML = html;
+            }
+        }
+
+        // ========================================
+        // APP INITIALIZATION
+        // ========================================
+        
+        const app = {
+            store: null,
+            ui: null,
+
+            init() {
+                this.store = new DataStore();
+                this.ui = new UI(this.store);
+                this.ui.render();
+                console.log('🚀 เริ่มต้นระบบสำเร็จ');
+            }
+        };
+
+        // Start App
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+    </script>
+    
+</body>
+</html>
