@@ -137,6 +137,65 @@
         </div>
     </div>
 
+    <!-- 🆕 Confirm Modal -->
+    <div id="confirm-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden p-4">
+        <div class="absolute inset-0 bg-black opacity-60" id="confirm-backdrop"></div>
+        <div class="bg-white w-full max-w-md mx-auto rounded-3xl shadow-2xl z-50 overflow-hidden relative p-8">
+            <div class="text-center mb-6">
+                <div id="confirm-icon" class="text-6xl mb-4">⚠️</div>
+                <h2 id="confirm-title" class="text-2xl font-bold text-slate-800 mb-2">ยืนยันการทำงาน</h2>
+                <p id="confirm-message" class="text-slate-600"></p>
+            </div>
+            <div class="flex gap-3">
+                <button id="confirm-cancel-btn" class="flex-1 bg-slate-200 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-300 transition">
+                    ยกเลิก
+                </button>
+                <button id="confirm-ok-btn" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">
+                    ยืนยัน
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🆕 Edit Category Modal -->
+    <div id="edit-category-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden p-4">
+        <div class="absolute inset-0 bg-black opacity-60" id="edit-category-backdrop"></div>
+        <div class="bg-white w-full max-w-md mx-auto rounded-3xl shadow-2xl z-50 overflow-hidden relative p-8">
+            <div class="flex justify-between items-center mb-6">
+                <p class="text-2xl font-bold text-slate-800">แก้ไขหมวดหมู่</p>
+                <button id="close-edit-category-btn" class="text-slate-400 text-2xl hover:text-slate-600">✕</button>
+            </div>
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-2">ชื่อเดิม:</label>
+                    <input type="text" id="old-category-name" class="w-full border-2 p-3 rounded-xl bg-slate-100 outline-none" disabled>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-2">ชื่อใหม่:</label>
+                    <input type="text" id="new-category-name" placeholder="พิมพ์ชื่อใหม่..." class="w-full border-2 p-3 rounded-xl outline-none focus:border-purple-400">
+                </div>
+                <button id="save-category-btn" class="w-full bg-purple-600 text-white py-4 rounded-2xl font-bold text-xl hover:bg-purple-700 transition">
+                    บันทึกการแก้ไข
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🆕 Alert Modal -->
+    <div id="alert-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden p-4">
+        <div class="absolute inset-0 bg-black opacity-60" id="alert-backdrop"></div>
+        <div class="bg-white w-full max-w-sm mx-auto rounded-3xl shadow-2xl z-50 overflow-hidden relative p-8">
+            <div class="text-center mb-6">
+                <div id="alert-icon" class="text-6xl mb-4">✅</div>
+                <h2 id="alert-title" class="text-2xl font-bold text-slate-800 mb-2">สำเร็จ</h2>
+                <p id="alert-message" class="text-slate-600"></p>
+            </div>
+            <button id="alert-ok-btn" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">
+                เสร็จสิ้น
+            </button>
+        </div>
+    </div>
+
     <script>
         // ========================================
         // DATA MANAGEMENT
@@ -209,6 +268,43 @@
                 this.save();
             }
 
+            // 🆕 แก้ไขสินค้า
+            updateItem(id, updatedItem) {
+                const index = this.data.items.findIndex(i => i.id === id);
+                if (index !== -1) {
+                    this.data.items[index] = {
+                        ...this.data.items[index],
+                        ...updatedItem
+                    };
+                    this.save();
+                }
+            }
+
+            // 🆕 แก้ไขชื่อหมวดหมู่
+            updateCategory(oldName, newName) {
+                if (oldName === newName) return;
+                
+                // เช็คว่าชื่อใหม่ซ้ำหรือไม่
+                if (this.data.categories.includes(newName)) {
+                    throw new Error('ชื่อหมวดหมู่นี้มีอยู่แล้ว');
+                }
+                
+                // แก้ไขชื่อในรายการหมวดหมู่
+                const index = this.data.categories.indexOf(oldName);
+                if (index !== -1) {
+                    this.data.categories[index] = newName;
+                }
+                
+                // แก้ไขชื่อหมวดหมู่ในสินค้าทั้งหมด
+                this.data.items.forEach(item => {
+                    if (item.category === oldName) {
+                        item.category = newName;
+                    }
+                });
+                
+                this.save();
+            }
+
             // 🆕 Export ข้อมูล
             exportData() {
                 return {
@@ -217,8 +313,8 @@
                 };
             }
 
-            // 🆕 Import ข้อมูล (เขียนทับ categories และ items)
-            importData(importedData) {
+            // 🆕 Import ข้อมูล (รองรับ 2 โหมด: merge หรือ replace)
+            importData(importedData, mode = 'replace') {
                 if (!importedData.categories || !Array.isArray(importedData.categories)) {
                     throw new Error('ไฟล์ไม่ถูกต้อง: ไม่พบข้อมูล categories');
                 }
@@ -226,9 +322,36 @@
                     throw new Error('ไฟล์ไม่ถูกต้อง: ไม่พบข้อมูล items');
                 }
 
-                // เขียนทับข้อมูล (ไม่แตะ rate)
-                this.data.categories = importedData.categories;
-                this.data.items = importedData.items;
+                if (mode === 'merge') {
+                    // โหมดรวมข้อมูล
+                    // เพิ่มหมวดหมู่ใหม่ (ไม่ซ้ำ)
+                    importedData.categories.forEach(cat => {
+                        if (!this.data.categories.includes(cat)) {
+                            this.data.categories.push(cat);
+                        }
+                    });
+                    
+                    // เพิ่มสินค้าทั้งหมด (ตรวจสอบซ้ำด้วยชื่อ + Robux + หมวดหมู่)
+                    importedData.items.forEach(newItem => {
+                        const isDuplicate = this.data.items.some(existingItem => 
+                            existingItem.name === newItem.name && 
+                            existingItem.robux === newItem.robux && 
+                            existingItem.category === newItem.category
+                        );
+                        
+                        if (!isDuplicate) {
+                            this.data.items.push({
+                                ...newItem,
+                                id: Date.now() + Math.random() // สร้าง ID ใหม่
+                            });
+                        }
+                    });
+                } else {
+                    // โหมดเขียนทับ (ไม่แตะ rate)
+                    this.data.categories = importedData.categories;
+                    this.data.items = importedData.items;
+                }
+                
                 this.save();
             }
         }
@@ -241,6 +364,9 @@
             constructor(store) {
                 this.store = store;
                 this.selectedCategories = new Set();
+                this.editingItemId = null; // 🆕 เก็บ ID สินค้าที่กำลังแก้ไข
+                this.editingCategoryName = null; // 🆕 เก็บชื่อหมวดหมู่ที่กำลังแก้ไข
+                this.confirmCallback = null; // 🆕 เก็บ callback สำหรับ confirm
                 this.initElements();
                 this.attachEvents();
             }
@@ -280,6 +406,31 @@
                 // New Category
                 this.newCategoryInput = document.getElementById('new-category-input');
                 this.addCategoryBtn = document.getElementById('add-category-btn');
+
+                // 🆕 Confirm Modal
+                this.confirmModal = document.getElementById('confirm-modal');
+                this.confirmBackdrop = document.getElementById('confirm-backdrop');
+                this.confirmTitle = document.getElementById('confirm-title');
+                this.confirmMessage = document.getElementById('confirm-message');
+                this.confirmIcon = document.getElementById('confirm-icon');
+                this.confirmOkBtn = document.getElementById('confirm-ok-btn');
+                this.confirmCancelBtn = document.getElementById('confirm-cancel-btn');
+
+                // 🆕 Edit Category Modal
+                this.editCategoryModal = document.getElementById('edit-category-modal');
+                this.editCategoryBackdrop = document.getElementById('edit-category-backdrop');
+                this.closeEditCategoryBtn = document.getElementById('close-edit-category-btn');
+                this.oldCategoryName = document.getElementById('old-category-name');
+                this.newCategoryName = document.getElementById('new-category-name');
+                this.saveCategoryBtn = document.getElementById('save-category-btn');
+
+                // 🆕 Alert Modal
+                this.alertModal = document.getElementById('alert-modal');
+                this.alertBackdrop = document.getElementById('alert-backdrop');
+                this.alertTitle = document.getElementById('alert-title');
+                this.alertMessage = document.getElementById('alert-message');
+                this.alertIcon = document.getElementById('alert-icon');
+                this.alertOkBtn = document.getElementById('alert-ok-btn');
             }
 
             attachEvents() {
@@ -311,9 +462,105 @@
                 // Select All / Clear All
                 this.selectAllBtn.addEventListener('click', () => this.selectAllCategories());
                 this.clearAllBtn.addEventListener('click', () => this.clearAllCategories());
+
+                // 🆕 Confirm Modal
+                this.confirmOkBtn.addEventListener('click', () => this.handleConfirmOk());
+                this.confirmCancelBtn.addEventListener('click', () => this.closeConfirmModal());
+                this.confirmBackdrop.addEventListener('click', () => this.closeConfirmModal());
+
+                // 🆕 Edit Category Modal
+                this.closeEditCategoryBtn.addEventListener('click', () => this.closeEditCategoryModal());
+                this.editCategoryBackdrop.addEventListener('click', () => this.closeEditCategoryModal());
+                this.saveCategoryBtn.addEventListener('click', () => this.handleSaveCategoryEdit());
+                this.newCategoryName.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.handleSaveCategoryEdit();
+                });
+
+                // 🆕 Alert Modal
+                this.alertOkBtn.addEventListener('click', () => this.closeAlertModal());
+                this.alertBackdrop.addEventListener('click', () => this.closeAlertModal());
             }
 
-            // 🆕 Export Function
+            // 🆕 Custom Alert
+            showAlert(message, title = 'แจ้งเตือน', icon = 'ℹ️') {
+                this.alertTitle.textContent = title;
+                this.alertMessage.textContent = message;
+                this.alertIcon.textContent = icon;
+                this.alertModal.classList.remove('hidden');
+            }
+
+            closeAlertModal() {
+                this.alertModal.classList.add('hidden');
+            }
+
+            // 🆕 Custom Confirm
+            showConfirm(message, title = 'ยืนยันการทำงาน', icon = '⚠️') {
+                return new Promise((resolve) => {
+                    this.confirmTitle.textContent = title;
+                    this.confirmMessage.textContent = message;
+                    this.confirmIcon.textContent = icon;
+                    this.confirmCallback = resolve;
+                    this.confirmModal.classList.remove('hidden');
+                });
+            }
+
+            handleConfirmOk() {
+                if (this.confirmCallback) {
+                    this.confirmCallback(true);
+                    this.confirmCallback = null;
+                }
+                this.closeConfirmModal();
+            }
+
+            closeConfirmModal() {
+                if (this.confirmCallback) {
+                    this.confirmCallback(false);
+                    this.confirmCallback = null;
+                }
+                this.confirmModal.classList.add('hidden');
+            }
+
+            // 🆕 Edit Category Modal
+            openEditCategoryModal(categoryName) {
+                this.editingCategoryName = categoryName;
+                this.oldCategoryName.value = categoryName;
+                this.newCategoryName.value = categoryName;
+                this.editCategoryModal.classList.remove('hidden');
+                this.newCategoryName.focus();
+                this.newCategoryName.select();
+            }
+
+            closeEditCategoryModal() {
+                this.editCategoryModal.classList.add('hidden');
+                this.editingCategoryName = null;
+            }
+
+            async handleSaveCategoryEdit() {
+                const newName = this.newCategoryName.value.trim();
+                
+                if (!newName) {
+                    this.showAlert('กรุณาพิมพ์ชื่อหมวดหมู่', 'ข้อผิดพลาด', '❌');
+                    return;
+                }
+                
+                try {
+                    this.store.updateCategory(this.editingCategoryName, newName);
+                    
+                    // อัปเดต selectedCategories
+                    if (this.selectedCategories.has(this.editingCategoryName)) {
+                        this.selectedCategories.delete(this.editingCategoryName);
+                        this.selectedCategories.add(newName);
+                    }
+                    
+                    this.closeEditCategoryModal();
+                    this.render();
+                    this.showAlert('แก้ไขหมวดหมู่สำเร็จ', 'สำเร็จ', '✅');
+                } catch (error) {
+                    this.showAlert(error.message, 'ข้อผิดพลาด', '❌');
+                }
+            }
+
+            // Export Function
             handleExport() {
                 const data = this.store.exportData();
                 const json = JSON.stringify(data, null, 2);
@@ -329,16 +576,35 @@
                 console.log('✅ Export สำเร็จ');
             }
 
-            // 🆕 Import Function
-            handleImport(event) {
+            // 🆕 Import Function (ถาม User ก่อน)
+            async handleImport(event) {
                 const file = event.target.files[0];
                 if (!file) return;
 
                 const reader = new FileReader();
-                reader.onload = (e) => {
+                reader.onload = async (e) => {
                     try {
                         const importedData = JSON.parse(e.target.result);
-                        this.store.importData(importedData);
+                        
+                        // ตรวจสอบว่ามีข้อมูลเดิมหรือไม่
+                        const hasExistingData = this.store.getCategories().length > 0 || this.store.getItems().length > 0;
+                        
+                        let mode = 'replace'; // ค่าเริ่มต้น
+                        
+                        if (hasExistingData) {
+                            // ถาม User ว่าต้องการรวมหรือเขียนทับ
+                            const userChoice = await this.showConfirm(
+                                'คุณมีข้อมูลอยู่แล้ว\n\n' +
+                                '✅ ยืนยัน = รวมข้อมูล (เก็บของเก่า + เพิ่มของใหม่)\n' +
+                                '❌ ยกเลิก = เขียนทับ (ลบของเก่า ใส่ของใหม่)\n',
+                                '🤔 เลือกวิธีนำเข้า',
+                                '📦'
+                            );
+                            mode = userChoice ? 'merge' : 'replace';
+                        }
+                        
+                        // Import ตามโหมดที่เลือก
+                        this.store.importData(importedData, mode);
                         
                         // ล้างการเลือกหมวดหมู่
                         this.selectedCategories.clear();
@@ -346,10 +612,11 @@
                         // อัปเดต UI ทันที
                         this.render();
                         
-                        alert('✅ นำเข้าข้อมูลสำเร็จ!');
-                        console.log('✅ Import สำเร็จ:', importedData);
+                        const modeText = mode === 'merge' ? 'รวมข้อมูล' : 'เขียนทับ';
+                        this.showAlert(`${modeText}สำเร็จ!`, 'สำเร็จ', '✅');
+                        console.log(`✅ Import (${modeText}):`, importedData);
                     } catch (error) {
-                        alert('❌ ไฟล์ไม่ถูกต้อง: ' + error.message);
+                        this.showAlert('ไฟล์ไม่ถูกต้อง: ' + error.message, 'ข้อผิดพลาด', '❌');
                         console.error('Import error:', error);
                     }
                 };
@@ -364,10 +631,10 @@
                 const rate = parseFloat(this.rateInput.value);
                 if (rate > 0) {
                     this.store.setRate(rate);
-                    alert('✅ บันทึกเรทแล้ว!');
+                    this.showAlert('บันทึกเรทแล้ว!', 'สำเร็จ', '✅');
                     this.renderProducts();
                 } else {
-                    alert('❌ กรุณาใส่เรทที่ถูกต้อง');
+                    this.showAlert('กรุณาใส่เรทที่ถูกต้อง', 'ข้อผิดพลาด', '❌');
                 }
             }
 
@@ -378,8 +645,30 @@
                 this.clearForm();
             }
 
+            // 🆕 เปิด Modal สำหรับแก้ไข
+            openEditModal(itemId) {
+                const item = this.store.getItems().find(i => i.id === itemId);
+                if (!item) return;
+                
+                this.editingItemId = itemId;
+                this.modal.classList.remove('hidden');
+                this.renderCategoryDropdown();
+                
+                // เติมข้อมูลเดิม
+                this.productName.value = item.name;
+                this.productRobux.value = item.robux;
+                this.productCategory.value = item.category;
+                this.productImage.value = item.img;
+                this.updatePricePreview();
+                
+                // เปลี่ยนข้อความปุ่ม
+                this.saveProductBtn.textContent = 'บันทึกการแก้ไข';
+            }
+
             closeModal() {
                 this.modal.classList.add('hidden');
+                this.editingItemId = null; // รีเซ็ต
+                this.saveProductBtn.textContent = 'บันทึกสินค้า'; // เปลี่ยนกลับ
             }
 
             clearForm() {
@@ -389,6 +678,7 @@
                 this.productImage.value = '';
                 this.newCategoryInput.value = '';
                 this.pricePreview.textContent = '0';
+                this.editingItemId = null; // รีเซ็ต
             }
 
             // Category Dropdown (for modal)
@@ -408,7 +698,7 @@
                 const name = this.newCategoryInput.value.trim();
                 
                 if (!name) {
-                    alert('❌ กรุณาพิมพ์ชื่อหมวดหมู่');
+                    this.showAlert('กรุณาพิมพ์ชื่อหมวดหมู่', 'ข้อผิดพลาด', '❌');
                     return;
                 }
 
@@ -420,7 +710,7 @@
                     this.renderCategoryList();
                     this.newCategoryInput.value = '';
                 } else {
-                    alert('❌ หมวดหมู่นี้มีอยู่แล้ว');
+                    this.showAlert('หมวดหมู่นี้มีอยู่แล้ว', 'ข้อผิดพลาด', '❌');
                 }
             }
 
@@ -497,47 +787,83 @@
                 const image = this.productImage.value.trim() || 'https://via.placeholder.com/150';
 
                 if (!name) {
-                    alert('❌ กรุณาใส่ชื่อสินค้า');
+                    this.showAlert('กรุณาใส่ชื่อสินค้า', 'ข้อผิดพลาด', '❌');
                     return;
                 }
 
                 if (!robux || robux <= 0) {
-                    alert('❌ กรุณาใส่ราคา Robux');
+                    this.showAlert('กรุณาใส่ราคา Robux', 'ข้อผิดพลาด', '❌');
                     return;
                 }
 
                 if (!category) {
-                    alert('❌ กรุณาเลือกหมวดหมู่');
+                    this.showAlert('กรุณาเลือกหมวดหมู่', 'ข้อผิดพลาด', '❌');
                     return;
                 }
 
-                this.store.addItem({
-                    name,
-                    robux,
-                    category,
-                    img: image
-                });
+                // 🆕 ถ้ากำลังแก้ไข
+                if (this.editingItemId) {
+                    this.store.updateItem(this.editingItemId, {
+                        name,
+                        robux,
+                        category,
+                        img: image
+                    });
+                    console.log('✅ แก้ไขสินค้าสำเร็จ');
+                } else {
+                    // เพิ่มสินค้าใหม่
+                    this.store.addItem({
+                        name,
+                        robux,
+                        category,
+                        img: image
+                    });
+                    console.log('✅ เพิ่มสินค้าสำเร็จ');
+                }
 
-                console.log('✅ เพิ่มสินค้าสำเร็จ');
                 this.closeModal();
                 this.renderProducts();
             }
 
             // Delete Category
-            handleDeleteCategory(name) {
+            async handleDeleteCategory(name) {
                 const itemCount = this.store.getItems().filter(i => i.category === name).length;
-                if (confirm(`ลบหมวดหมู่ "${name}" และสินค้าทั้งหมด ${itemCount} รายการ?`)) {
+                const confirmed = await this.showConfirm(
+                    `ลบหมวดหมู่ "${name}" และสินค้าทั้งหมด ${itemCount} รายการ?`,
+                    'ยืนยันการลบ',
+                    '🗑️'
+                );
+                
+                if (confirmed) {
                     this.store.deleteCategory(name);
                     this.selectedCategories.delete(name);
                     this.render();
+                    this.showAlert('ลบหมวดหมู่สำเร็จ', 'สำเร็จ', '✅');
                 }
             }
 
+            // 🆕 แก้ไขหมวดหมู่
+            handleEditCategory(oldName) {
+                this.openEditCategoryModal(oldName);
+            }
+
+            // 🆕 แก้ไขสินค้า
+            handleEditItem(id) {
+                this.openEditModal(id);
+            }
+
             // Delete Item
-            handleDeleteItem(id) {
-                if (confirm('ลบสินค้านี้?')) {
+            async handleDeleteItem(id) {
+                const confirmed = await this.showConfirm(
+                    'ลบสินค้านี้?',
+                    'ยืนยันการลบ',
+                    '🗑️'
+                );
+                
+                if (confirmed) {
                     this.store.deleteItem(id);
                     this.renderProducts();
+                    this.showAlert('ลบสินค้าสำเร็จ', 'สำเร็จ', '✅');
                 }
             }
 
@@ -600,9 +926,14 @@
                             <div class="bg-white rounded-3xl border overflow-hidden shadow-sm">
                                 <div class="bg-slate-800 p-3 px-5 text-white text-sm font-bold flex justify-between items-center">
                                     <span>📂 ${cat} <span class="text-slate-400 text-xs">(${categoryItems.length} รายการ)</span></span>
-                                    <button onclick="app.ui.handleDeleteCategory('${cat}')" class="text-red-400 hover:text-red-300 transition px-2 text-xs">
-                                        🗑️ ลบหมวดหมู่
-                                    </button>
+                                    <div class="flex gap-2">
+                                        <button onclick="app.ui.handleEditCategory('${cat}')" class="text-yellow-400 hover:text-yellow-300 transition px-2 text-xs">
+                                            ✏️ แก้ไข
+                                        </button>
+                                        <button onclick="app.ui.handleDeleteCategory('${cat}')" class="text-red-400 hover:text-red-300 transition px-2 text-xs">
+                                            🗑️ ลบ
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="p-2 overflow-x-auto">
                                     <table class="w-full text-sm">
@@ -620,7 +951,10 @@
                                     <td class="text-right font-bold text-blue-500">${item.robux} R$</td>
                                     <td class="text-right font-bold text-green-600">${thb}฿</td>
                                     <td class="text-center">
-                                        <button onclick="app.ui.handleDeleteItem(${item.id})" class="text-slate-300 hover:text-red-500 transition">
+                                        <button onclick="app.ui.handleEditItem(${item.id})" class="text-blue-400 hover:text-blue-600 transition px-2" title="แก้ไข">
+                                            ✏️
+                                        </button>
+                                        <button onclick="app.ui.handleDeleteItem(${item.id})" class="text-slate-300 hover:text-red-500 transition px-2" title="ลบ">
                                             ✕
                                         </button>
                                     </td>
