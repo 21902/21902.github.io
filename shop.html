@@ -181,6 +181,38 @@
         </div>
     </div>
 
+    <!-- 🆕 Import Choice Modal -->
+    <div id="import-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden p-4">
+        <div class="absolute inset-0 bg-black opacity-60" id="import-backdrop"></div>
+        <div class="bg-white w-full max-w-md mx-auto rounded-3xl shadow-2xl z-50 overflow-hidden relative p-8">
+            <div class="text-center mb-6">
+                <div class="text-6xl mb-4">📦</div>
+                <h2 class="text-2xl font-bold text-slate-800 mb-4">เลือกวิธีนำเข้า</h2>
+                <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mb-4">
+                    <p class="text-sm text-slate-700 leading-relaxed">
+                        <span class="font-bold text-amber-700">😳 คุณมีข้อมูลอยู่แล้ว</span><br>
+                        <span class="inline-block mt-2">
+                            <span class="text-green-600">✅ ยืนยัน</span> = รวมข้อมูล<br>
+                            <span class="text-xs text-slate-500">(เก็บของเก่า + เพิ่มของใหม่)</span>
+                        </span><br>
+                        <span class="inline-block mt-2">
+                            <span class="text-red-600">❌ ยกเลิก</span> = เขียนทับ<br>
+                            <span class="text-xs text-slate-500">(ลบของเก่า ใส่ของใหม่)</span>
+                        </span>
+                    </p>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button id="import-replace-btn" class="flex-1 bg-slate-200 text-slate-700 py-4 rounded-xl font-bold hover:bg-slate-300 transition">
+                    ยกเลิก
+                </button>
+                <button id="import-merge-btn" class="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition">
+                    ยืนยัน
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 🆕 Alert Modal -->
     <div id="alert-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden p-4">
         <div class="absolute inset-0 bg-black opacity-60" id="alert-backdrop"></div>
@@ -191,7 +223,7 @@
                 <p id="alert-message" class="text-slate-600"></p>
             </div>
             <button id="alert-ok-btn" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">
-                เสร็จสิ้น
+                ตรง
             </button>
         </div>
     </div>
@@ -431,6 +463,12 @@
                 this.alertMessage = document.getElementById('alert-message');
                 this.alertIcon = document.getElementById('alert-icon');
                 this.alertOkBtn = document.getElementById('alert-ok-btn');
+
+                // 🆕 Import Modal
+                this.importModal = document.getElementById('import-modal');
+                this.importBackdrop = document.getElementById('import-backdrop');
+                this.importMergeBtn = document.getElementById('import-merge-btn');
+                this.importReplaceBtn = document.getElementById('import-replace-btn');
             }
 
             attachEvents() {
@@ -479,6 +517,11 @@
                 // 🆕 Alert Modal
                 this.alertOkBtn.addEventListener('click', () => this.closeAlertModal());
                 this.alertBackdrop.addEventListener('click', () => this.closeAlertModal());
+
+                // 🆕 Import Modal
+                this.importMergeBtn.addEventListener('click', () => this.handleImportChoice('merge'));
+                this.importReplaceBtn.addEventListener('click', () => this.handleImportChoice('replace'));
+                this.importBackdrop.addEventListener('click', () => this.handleImportChoice(null));
             }
 
             // 🆕 Custom Alert
@@ -491,6 +534,22 @@
 
             closeAlertModal() {
                 this.alertModal.classList.add('hidden');
+            }
+
+            // 🆕 Import Choice Modal
+            showImportChoiceModal() {
+                return new Promise((resolve) => {
+                    this.importChoiceCallback = resolve;
+                    this.importModal.classList.remove('hidden');
+                });
+            }
+
+            handleImportChoice(mode) {
+                if (this.importChoiceCallback) {
+                    this.importChoiceCallback(mode);
+                    this.importChoiceCallback = null;
+                }
+                this.importModal.classList.add('hidden');
             }
 
             // 🆕 Custom Confirm
@@ -592,15 +651,9 @@
                         let mode = 'replace'; // ค่าเริ่มต้น
                         
                         if (hasExistingData) {
-                            // ถาม User ว่าต้องการรวมหรือเขียนทับ
-                            const userChoice = await this.showConfirm(
-                                'คุณมีข้อมูลอยู่แล้ว\n\n' +
-                                '✅ ยืนยัน = รวมข้อมูล (เก็บของเก่า + เพิ่มของใหม่)\n' +
-                                '❌ ยกเลิก = เขียนทับ (ลบของเก่า ใส่ของใหม่)\n',
-                                '🤔 เลือกวิธีนำเข้า',
-                                '📦'
-                            );
-                            mode = userChoice ? 'merge' : 'replace';
+                            // เปิด Import Choice Modal
+                            mode = await this.showImportChoiceModal();
+                            if (mode === null) return; // ยกเลิก
                         }
                         
                         // Import ตามโหมดที่เลือก
